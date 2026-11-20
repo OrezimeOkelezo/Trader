@@ -36,3 +36,12 @@ The saved references Freqtrade, Freqtrade Strategies and Superalgos informed the
 - Never put a Supabase secret or service-role key in this repository.
 - Review Supabase Auth email settings, URL allow-lists, RLS policies and project security advisors before public launch.
 - Trader is educational, not a broker or investment service.
+
+
+## Interactive market chart and signal studies
+- Trading Signals uses TradingView's interactive Advanced Chart widget for available forex, metal and crypto symbols.
+- Users can select a market, change timeframe, or enter a TradingView ticker such as `OANDA:EURGBP`.
+- The chart includes RSI, MACD and Bollinger Bands overlays/panels where supported by TradingView.
+- Educational notes explain RSI, MACD, EMA/SMA and Bollinger Bands and how those concepts are also available in MetaTrader 4 and MetaTrader 5.
+- TradingView and broker feeds can differ; quote access and delays depend on instrument, exchange permissions, region and provider.
+- The page is an educational charting workspace, not a source of personal buy/sell instructions or automated trade signals.

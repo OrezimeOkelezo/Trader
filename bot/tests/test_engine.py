@@ -41,7 +41,7 @@ def test_backtest_is_simulation_and_returns_risk_metrics():
     assert result["mode"] == "PAPER_SIMULATION_ONLY"
     assert result["starting_balance"] == 10_000
     assert result["max_drawdown_pct"] >= 0
-    assert result["live_execution"] if "live_execution" in result else True
+    assert result["live_execution"] is False
     assert all(t["quantity"] > 0 for t in result["trades"])
 
 

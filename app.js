@@ -20,7 +20,7 @@ function showAuth(){appShell.classList.add("hidden");authShell.classList.remove(
 function renderProgress(){$("lessonCount").innerHTML=completed.size+" <small>/ 8</small>";document.querySelectorAll("[data-lesson]").forEach(b=>{const done=completed.has(Number(b.dataset.lesson));b.classList.toggle("done",done);b.innerHTML=done?'Completed <span>✓</span>':'Mark complete <span>→</span>';});}
 async function loadLearnerData(user){const {data:profile,error:pe}=await supabase.from("profiles").select("full_name,email").eq("id",user.id).maybeSingle();if(pe)console.warn(pe.message);const name=profile?.full_name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Trader";$("profileEmail").textContent=user.email||"Trader learner";$("welcomeName").textContent=name.trim().split(/\s+/)[0];completed.clear();const {data:rows,error}=await supabase.from("lesson_progress").select("lesson_id").eq("user_id",user.id);if(error)console.error(error.message);else(rows||[]).forEach(r=>completed.add(Number(r.lesson_id)));renderProgress();}
 async function enterApp(user){currentUser=user;authShell.classList.add("hidden");appShell.classList.remove("hidden");await loadLearnerData(user);}
-function showPage(page){document.querySelectorAll(".page-view").forEach(p=>p.classList.toggle("active",p.id==="page-"+page));document.querySelectorAll(".nav-link[data-page]").forEach(n=>n.classList.toggle("active",n.dataset.page===page));$("pageName").textContent=({overview:"Overview",markets:"Market watch",practice:"Paper practice",signals:"Trading signals",learn:"Learning hub"})[page]||"Overview";if(page==="signals")renderMarketChart();window.scrollTo({top:0,behavior:"smooth"});}
+function showPage(page){document.querySelectorAll(".page-view").forEach(p=>p.classList.toggle("active",p.id==="page-"+page));document.querySelectorAll(".nav-link[data-page]").forEach(n=>n.classList.toggle("active",n.dataset.page===page));$("pageName").textContent=({overview:"Overview",markets:"Market watch",practice:"Paper practice",signals:"Trading signals",bot:"Bot Lab",learn:"Learning hub"})[page]||"Overview";if(page==="signals")renderMarketChart();window.scrollTo({top:0,behavior:"smooth"});}
 const marketNames={"FX:EURUSD":"EUR / USD","FX:GBPUSD":"GBP / USD","FX:USDJPY":"USD / JPY","FX:AUDUSD":"AUD / USD","FX:USDCHF":"USD / CHF","FX:USDCAD":"USD / CAD","FX:NZDUSD":"NZD / USD","OANDA:XAUUSD":"Gold / USD","OANDA:XAGUSD":"Silver / USD","BINANCE:BTCUSDT":"Bitcoin / USDT","BINANCE:ETHUSDT":"Ethereum / USDT","BINANCE:SOLUSDT":"Solana / USDT","BINANCE:BNBUSDT":"BNB / USDT","BINANCE:XRPUSDT":"XRP / USDT","BINANCE:ADAUSDT":"Cardano / USDT","BINANCE:DOGEUSDT":"Dogecoin / USDT"};
 let chartLoadToken=0;
 function renderMarketChart(symbol){const selected=symbol||$("marketSymbol").value;const interval=$("marketInterval").value;const box=$("tvChartContainer");if(!box)return;const token=++chartLoadToken;box.innerHTML="";$("chartAssetTitle").textContent=marketNames[selected]||selected;$("marketSymbol").value=marketNames[selected]?selected:$("marketSymbol").value;const script=document.createElement("script");script.type="text/javascript";script.async=true;script.src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";script.innerHTML=JSON.stringify({autosize:true,symbol:selected,interval,timezone:"Etc/UTC",theme:"dark",style:"1",locale:"en",allow_symbol_change:true,calendar:false,details:false,hotlist:false,hide_side_toolbar:false,withdateranges:true,save_image:false,studies:["STD;RSI","STD;MACD","STD;Bollinger Bands"],support_host:"https://www.tradingview.com"});if(token===chartLoadToken)box.appendChild(script);}
@@ -42,3 +42,50 @@ document.querySelectorAll("[data-study]").forEach(b=>b.addEventListener("click",
 supabase.auth.onAuthStateChange((event,session)=>{if(session?.user&&["SIGNED_IN","INITIAL_SESSION","TOKEN_REFRESHED","USER_UPDATED"].includes(event)){enterApp(session.user);}else if(event==="SIGNED_OUT"){currentUser=null;showAuth();}});
 const {data:{session}}=await supabase.auth.getSession();if(session?.user)await enterApp(session.user);
 renderSlide();
+const botFileInput=$("botCsvFile");
+function parseBotCsv(text){
+ const lines=text.trim().split(/\r?\n/);
+ if(lines.length<61)throw new Error("Please upload a CSV containing at least 60 candle rows plus a header.");
+ const headers=lines[0].split(",").map(x=>x.trim().toLowerCase());
+ const required=["timestamp","open","high","low","close"];
+ for(const name of required)if(!headers.includes(name))throw new Error("CSV is missing the required column: "+name);
+ const candles=lines.slice(1).filter(Boolean).map((line,index)=>{
+  const cells=line.split(",");
+  const row={};headers.forEach((key,i)=>row[key]=cells[i]?.trim());
+  const candle={timestamp:row.timestamp,open:Number(row.open),high:Number(row.high),low:Number(row.low),close:Number(row.close),volume:Number(row.volume||0)};
+  if(!candle.timestamp||![candle.open,candle.high,candle.low,candle.close,candle.volume].every(Number.isFinite))throw new Error("Invalid candle values on CSV row "+(index+2));
+  if(candle.open<=0||candle.high<=0||candle.low<=0||candle.close<=0||candle.volume<0||candle.high<Math.max(candle.open,candle.close,candle.low)||candle.low>Math.min(candle.open,candle.close,candle.high))throw new Error("Invalid OHLC values on CSV row "+(index+2));
+  return candle;
+ });
+ return candles;
+}
+function showBotMessage(text,error=false){const el=$("botRunMessage");el.textContent=text;el.className="bot-run-message"+(error?" error":"");}
+function renderBotResult(result){
+ $("botResults").hidden=false;
+ $("botResultTitle").textContent=result.symbol+" · "+result.timeframe+" · "+result.market.toUpperCase();
+ const metrics=[["Ending balance",result.ending_balance],["Net result",result.net_profit],["Return",result.net_return_pct+"%"],["Trades",result.trade_count],["Win rate",result.win_rate_pct+"%"],["Max drawdown",result.max_drawdown_pct+"%"]];
+ $("botMetrics").innerHTML=metrics.map(([label,value])=>'<div class="bot-metric"><span>'+label+'</span><b>'+value+'</b></div>').join("");
+ $("botRiskSummary").innerHTML='<p>Risk budget: <b>'+result.risk_controls.risk_per_trade_pct+'%</b> per simulated position</p><p>Daily stop: <b>'+result.risk_controls.daily_loss_limit_pct+'%</b></p><p>Max drawdown stop: <b>'+result.risk_controls.max_drawdown_pct+'%</b></p><p>Leverage cap: <b>'+result.risk_controls.max_leverage+'x</b></p><p>Mode: <b>PAPER ONLY</b></p>';
+ $("botTradeRows").innerHTML=result.trades.length?result.trades.slice().reverse().map(t=>'<tr><td>'+t.side+'</td><td>'+t.entry_price+'</td><td>'+t.exit_price+'</td><td>'+t.net_pnl+'</td><td>'+t.exit_reason+'</td></tr>').join(""):'<tr><td colspan="5">No simulated trades were generated for this sample.</td></tr>';
+}
+$("runBotBacktest").addEventListener("click",async()=>{
+ const file=botFileInput.files?.[0];
+ if(!file)return showBotMessage("Choose a historical OHLCV CSV file first.",true);
+ if(file.size>5*1024*1024)return showBotMessage("CSV is larger than 5 MB. Please use a smaller historical sample.",true);
+ const apiUrl=$("botApiUrl").value.trim().replace(/\/$/,"");
+ if(!/^https?:\/\//i.test(apiUrl))return showBotMessage("Enter a valid API URL, for example http://127.0.0.1:8000.",true);
+ const balance=Number($("botBalance").value),riskPct=Number($("botRisk").value);
+ if(!(balance>=100&&balance<=1000000)||!(riskPct>=0.1&&riskPct<=2))return showBotMessage("Check the virtual balance and risk budget values.",true);
+ const button=$("runBotBacktest");button.disabled=true;showBotMessage("Reading candles and running the paper simulation…");
+ try{
+  const candles=parseBotCsv(await file.text());
+  if(candles.length>100000)throw new Error("Please limit each backtest to 100,000 candles.");
+  const body={market:$("botMarket").value,symbol:$("botSymbol").value.trim().toUpperCase(),timeframe:$("botTimeframe").value,candles,risk:{starting_balance:balance,risk_per_trade_pct:riskPct}};
+  if(!body.symbol)throw new Error("Enter a symbol such as EURUSD or BTC/USDT.");
+  const response=await fetch(apiUrl+"/paper/replay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.detail||"Paper engine returned an error.");
+  renderBotResult(data);showBotMessage("Simulation completed. No live orders were sent.");
+ }catch(error){showBotMessage(error.message||"Could not run the simulation. Check the API server and CSV file.",true);}
+ finally{button.disabled=false;}
+});

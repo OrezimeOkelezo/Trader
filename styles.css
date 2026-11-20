@@ -19,3 +19,23 @@
 .mt-platform-note h3{margin:8px 0}
 @media(max-width:900px){.signal-toolbar{grid-template-columns:1fr 1fr}.custom-symbol-control{grid-column:1}.chart-load-btn{grid-column:2;grid-row:2}}
 @media(max-width:600px){.signal-toolbar{grid-template-columns:1fr}.custom-symbol-control,.chart-load-btn{grid-column:auto;grid-row:auto}.tv-chart-wrap{height:430px}.indicator-grid{grid-template-columns:1fr}}
+
+.bot-safety-strip{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;margin:15px 0;background:#102219;border:1px solid #28553a;border-radius:8px;color:#7fe2a0;font-size:9px;letter-spacing:.6px}
+.bot-setup-panel{padding:18px;margin-bottom:15px}
+.bot-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.bot-form-grid input[type=file]{font-size:10px;padding:8px}
+.bot-file-help,.bot-run-message{font-size:10px;color:var(--muted);line-height:1.7;margin:10px 0 14px}
+.bot-run-message.error{color:#ff8585}
+.bot-results-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:13px;margin-bottom:15px}
+.bot-result-main,.bot-trades-panel{grid-column:1/-1}
+.bot-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.bot-metric{padding:12px;border:1px solid var(--line);border-radius:8px;display:grid;gap:7px}
+.bot-metric span,.bot-risk-summary{font-size:10px;color:var(--muted)}
+.bot-metric b{font-size:17px;color:var(--text)}
+.bot-risk-summary p{padding:7px 0;border-bottom:1px solid var(--line)}
+.bot-risk-summary b{color:var(--text)}
+.bot-trades-scroll{overflow-x:auto}
+.bot-trades-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:12px}
+.bot-trades-table th,.bot-trades-table td{text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bot-trades-table th{color:var(--muted);font-weight:600}
+@media(max-width:650px){.bot-form-grid,.bot-results-grid{grid-template-columns:1fr}.bot-result-main,.bot-trades-panel{grid-column:auto}.bot-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

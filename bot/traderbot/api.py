@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .engine import run_backtest
 from .models import SimulationRequest
@@ -9,6 +12,23 @@ app = FastAPI(
     title="Trader Paper Engine",
     version="0.1.0",
     description="Educational forex and cryptocurrency backtesting and paper simulation. No broker connection or live order execution.",
+)
+
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "TRADER_ALLOWED_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 

@@ -29,8 +29,7 @@ $("marketInterval").addEventListener("change",()=>renderMarketChart());
 $("loadCustomSymbol").addEventListener("click",()=>{const value=$("customSymbol").value.trim().toUpperCase();if(!value)return;$("marketSymbol").value="";renderMarketChart(value);});
 $("customSymbol").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("loadCustomSymbol").click();}});
 
-document.querySelectorAll(".dot").forEach(d=>d.addEventListener("click",()=>{currentSlide=Number(d.dataset.slide);if(new URLSearchParams(window.location.search).get("mode")==="signup")setMode("signup");
-renderSlide();}));
+document.querySelectorAll(".dot").forEach(d=>d.addEventListener("click",()=>{currentSlide=Number(d.dataset.slide);renderSlide();}));
 $("nextSlide").addEventListener("click",()=>{currentSlide=(currentSlide+1)%slides.length;renderSlide();});$("prevSlide").addEventListener("click",()=>{currentSlide=(currentSlide+slides.length-1)%slides.length;renderSlide();});
 document.querySelectorAll(".auth-tab").forEach(t=>t.addEventListener("click",()=>setMode(t.dataset.mode)));
 $("togglePassword").addEventListener("click",()=>{const p=$("password");p.type=p.type==="password"?"text":"password";$("togglePassword").textContent=p.type==="password"?"Show":"Hide";});
@@ -75,6 +74,7 @@ document.querySelectorAll("[data-lesson]").forEach(b=>b.addEventListener("click"
 document.querySelectorAll("[data-study]").forEach(b=>b.addEventListener("click",()=>{showPage("signals");const match=Object.keys(marketNames).find(key=>key.includes(b.dataset.study.toUpperCase().replace("/",""))||marketNames[key].toUpperCase().includes(b.dataset.study.toUpperCase()));if(match){$("marketSymbol").value=match;renderMarketChart(match);}}));
 supabase.auth.onAuthStateChange((event,session)=>{if(session?.user&&["SIGNED_IN","INITIAL_SESSION"].includes(event)){const user=session.user;queueMicrotask(()=>{enterApp(user).catch(err=>console.error("Could not load Trader session:",err));});}else if(event==="SIGNED_OUT"){currentUser=null;showAuth();}});
 const {data:{session}}=await supabase.auth.getSession();if(session?.user)await enterApp(session.user);
+if(new URLSearchParams(window.location.search).get("mode")==="signup")setMode("signup");
 renderSlide();
 const botFileInput=$("botCsvFile");
 function parseBotCsv(text){

@@ -94,3 +94,6 @@
 .legal-footer-links{display:inline-block;margin-left:8px}
 .legal-footer-links a{color:var(--green)}
 @media(max-width:800px){.landing-nav{align-items:flex-start;gap:15px}.landing-nav nav{gap:11px;flex-wrap:wrap;justify-content:flex-end}.landing-hero{grid-template-columns:1fr;padding-top:58px;gap:42px}.landing-visual{margin:0 12px}.landing-feature-grid{grid-template-columns:1fr}.landing-note{margin:0 5% 55px;align-items:flex-start;flex-direction:column}.landing-footer{flex-direction:column}.legal-page{padding-top:45px}}
+
+/* Accessible honeypot: hidden from people, detectable by simple form-filling bots */
+.bot-trap{position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}

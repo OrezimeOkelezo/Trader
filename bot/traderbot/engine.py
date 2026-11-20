@@ -105,13 +105,16 @@ def run_backtest(candles: list[dict[str, Any]], strategy: StrategyConfig,
                 gap_price = max(open_price, position.target_price) if position.side == 1 else min(open_price, position.target_price)
                 close_position(gap_price, stamp_text, "take_profit")
 
-        current_equity = cash
+        current_equity = cash + (
+            (close - position.entry_price) * position.quantity * position.side
+            if position is not None else 0
+        )
         peak_equity = max(peak_equity, current_equity)
         drawdown = (peak_equity - current_equity) / peak_equity * 100 if peak_equity else 0
         max_drawdown = max(max_drawdown, drawdown)
         if drawdown >= risk.max_drawdown_pct:
             halted_for_drawdown = True
-        if cash <= day_start_equity * (1 - risk.daily_loss_limit_pct / 100):
+        if current_equity <= day_start_equity * (1 - risk.daily_loss_limit_pct / 100):
             halted_for_day = True
 
         if position is None and signal != 0 and not halted_for_day and not halted_for_drawdown:

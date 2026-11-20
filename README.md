@@ -1,42 +1,38 @@
 # Trader
 
-Trader is a responsive educational market-learning website. It introduces market concepts, provides illustrative watchlists and signal studies, and explains simulated portfolio practice.
+Trader is an educational market-learning website with Supabase-powered account access, a learning dashboard, sample watchlists, paper-practice explanations and a dedicated Trading Signals learning page.
 
-## Included
-- Three pictorial onboarding slides explaining the platform.
-- Email/password login and signup interface for a front-end preview.
-- Overview dashboard with illustrative chart and sample watchlist.
-- Market watch page with clearly labelled sample figures.
-- Paper-practice page with a virtual-only balance.
-- Educational signal studies: trend structure, support/resistance and uncertainty.
-- Eight beginner learning topics with local completion tracking.
-- Responsive dark interface with green accents.
+## Stack
+- Static frontend: HTML, CSS and JavaScript modules
+- Authentication and database: Supabase Auth + Postgres
+- Browser SDK: supabase-js v2 with the project's publishable key
+- Hosting: GitHub Pages or any static host
+
+## Supabase project
+Configured for the Supabase project **Klasek** (project ref: qijqcrcxhbiftvfplyyl).
+
+### Account and data storage
+- New users register with name, email and password using Supabase Auth.
+- Passwords are handled by Supabase Auth and are never stored by this frontend.
+- A database trigger creates a matching row in public.profiles.
+- Lesson completions are stored in public.lesson_progress.
+- Row Level Security restricts each learner to their own profile and progress rows.
+- Email verification and password reset behaviour follow the Supabase Auth project settings.
 
 ## Run locally
-Open index.html in a browser, or run a static server in this folder:
-python -m http.server 8000
-Then visit http://localhost:8000.
+Serve this folder with a static server, for example: python -m http.server 8000, then visit http://localhost:8000.
 
-## Authentication
-The current login/signup screen is a front-end preview only. It does not create secure user accounts, store passwords, or provide password recovery. Before public launch, connect a trusted authentication provider and implement server-side sessions, email verification, password reset, rate limiting and appropriate security rules. Never store plain-text passwords in browser storage.
+## Configure Supabase Auth URLs
+In Supabase Dashboard, open Authentication → URL Configuration and add your deployed site URL to Site URL and Redirect URLs. For local testing, add http://localhost:8000/**. Ensure the Email provider is enabled and configure email confirmation as desired.
 
-## Market data and practice
-All displayed prices, percentage changes, charts and the $10,000 practice balance are illustrative placeholders. They are not live prices, trade alerts or recommendations. The practice experience is explanatory only; it does not submit, route or execute orders.
+## Trading signals page
+The Trading Signals section contains educational chart-study examples only. It does not publish actionable buy/sell instructions, live trading calls, broker orders or financial advice. All market figures elsewhere in the app are illustrative placeholders.
 
-## Reference projects
-The design and learning direction take conceptual inspiration from the user's saved GitHub references:
-- Freqtrade: modular strategy concepts and the distinction between analysis, testing and execution.
-- Freqtrade Strategies: examples of how strategy ideas can be organised for study.
-- Superalgos: visual, workflow-oriented presentation of market-analysis concepts.
+## Saved GitHub project inspiration
+The saved references Freqtrade, Freqtrade Strategies and Superalgos informed the separation of market-study concepts, strategy-learning vocabulary and simulation from execution. Their bots are not copied, deployed or connected to Trader.
 
-These projects are references only. Trader does not copy their source code, run trading bots, connect brokerages or execute trades.
-
-## Suggested production milestones
-1. Add secure authentication and a user profile database.
-2. Add a lesson-content model and persist learner progress.
-3. Add a market-data provider only if current quotes are needed, with clear source and delay labels.
-4. Build a fully simulated portfolio ledger with explicit virtual-only state.
-5. Add accessibility, security and mobile-device testing before launch.
-
-## Educational disclaimer
-Trader is for learning and demonstration. It does not provide financial advice, personalised investment recommendations, or actionable buy/sell signals. Financial markets involve risk.
+## Security notes
+- The publishable Supabase key in browser code is intended for frontend use. Database access is restricted by Row Level Security.
+- Never put a Supabase secret or service-role key in this repository.
+- Review Supabase Auth email settings, URL allow-lists, RLS policies and project security advisors before public launch.
+- Trader is educational, not a broker or investment service.

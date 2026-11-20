@@ -202,3 +202,56 @@ $("runBotBacktest").addEventListener("click",async()=>{
  }catch(error){showBotMessage(error.message||"Could not run the simulation. Check the API server and CSV file.",true);}
  finally{button.disabled=false;}
 });
+
+
+/* Historical indicator study: authenticated Supabase Edge Function, CSV input only */
+function parseStudyCsv(raw){
+ const lines=raw.trim().split(/\r?\n/);
+ if(lines.length<61)throw new Error("Please provide a header and at least 60 candle rows.");
+ const headers=lines[0].split(",").map(v=>v.trim().toLowerCase());
+ for(const key of ["open","high","low","close"])if(!headers.includes(key))throw new Error("CSV needs open, high, low and close columns.");
+ const rows=lines.slice(1).filter(Boolean).map((line,index)=>{
+  const cells=line.split(","), row={};headers.forEach((key,i)=>row[key]=cells[i]?.trim());
+  const candle={timestamp:row.timestamp||String(index+1),open:Number(row.open),high:Number(row.high),low:Number(row.low),close:Number(row.close)};
+  if(![candle.open,candle.high,candle.low,candle.close].every(Number.isFinite))throw new Error("Invalid candle on CSV row "+(index+2)+".");
+  if(candle.open<=0||candle.high<=0||candle.low<=0||candle.close<=0||candle.high<Math.max(candle.open,candle.close,candle.low)||candle.low>Math.min(candle.open,candle.close,candle.high))throw new Error("Invalid high/low values on CSV row "+(index+2)+".");
+  return candle;
+ });
+ if(rows.length>5000)throw new Error("Please limit this analysis to 5,000 candles.");
+ return rows;
+}
+function showStudyMessage(text,error=false){const el=$("studyRunMessage");el.textContent=text;el.classList.toggle("error",error);}
+function renderStudyResult(result){
+ $("studyResults").hidden=false;
+ $("studyTrend").textContent=String(result.market_context||"").replaceAll("_"," ");
+ $("studyMomentum").textContent=String(result.momentum_context||"").replaceAll("_"," ");
+ $("studyCount").textContent=String(result.candles_analyzed||0);
+ const values=[
+  ["RSI (14)",result.indicators.rsi_14],
+  ["EMA (20)",result.indicators.ema_20],
+  ["EMA (50)",result.indicators.ema_50],
+  ["MACD histogram",result.indicators.macd.histogram],
+  ["Bollinger upper",result.indicators.bollinger_20_2.upper],
+  ["Bollinger middle",result.indicators.bollinger_20_2.middle],
+  ["Bollinger lower",result.indicators.bollinger_20_2.lower],
+  ["Last close",result.latest_close]
+ ];
+ $("studyMetrics").replaceChildren(...values.map(([label,value])=>{const card=document.createElement("div");card.className="study-metric";const small=document.createElement("small");small.textContent=label;const strong=document.createElement("b");strong.textContent=value??"N/A";card.append(small,strong);return card;}));
+ $("studyObservations").replaceChildren(...(result.observations||[]).map(line=>{const li=document.createElement("li");li.textContent=line;return li;}));
+}
+$("runMarketStudy")?.addEventListener("click",async()=>{
+ const file=$("studyCsvFile").files?.[0];if(!file)return showStudyMessage("Choose a historical CSV file first.",true);
+ if(file.size>2*1024*1024)return showStudyMessage("Please choose a CSV smaller than 2 MB.",true);
+ const button=$("runMarketStudy");button.disabled=true;$("studyResults").hidden=true;showStudyMessage("Checking your sign-in and analysing historical candles…");
+ try{
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session?.access_token)throw new Error("Please sign in to Trader again.");
+  const candles=parseStudyCsv(await file.text());
+  const {data,error}=await supabase.functions.invoke("market-study",{body:{candles}});
+  if(error)throw new Error(error.message||"The analysis service returned an error.");
+  if(data?.error)throw new Error(data.error);
+  renderStudyResult(data);
+  showStudyMessage("Analysis complete. These are historical indicator readings, not future predictions.");
+ }catch(error){showStudyMessage(error.message||"Could not analyse this CSV. Check the file and try again.",true);}
+ finally{button.disabled=false;}
+});

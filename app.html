@@ -39,6 +39,23 @@
  <article class="panel indicator-card"><span class="indicator-tag">VOLATILITY</span><h3>Bollinger Bands</h3><p>Volatility bands around a moving average. Band expansion and contraction describe changing volatility. Touching a band alone does not mean price must reverse.</p><div class="indicator-rule"><b>Study:</b> volatility and compression. <b>Not:</b> a standalone signal.</div></article>
 </div>
 <div class="panel mt-platform-note"><div class="eyebrow">MT4 / MT5 COMPATIBILITY</div><h3>Same analysis concepts, broker-specific prices</h3><p>RSI, MACD, moving averages and Bollinger Bands are standard indicator concepts available in MetaTrader 4 and MetaTrader 5. TradingView symbols and broker symbols may differ, and spreads, candle close times and prices can vary. Match the exact instrument and timeframe on your broker's demo chart before comparing studies.</p></div>
+<div class="panel study-engine-panel">
+ <div class="eyebrow">SUPABASE EDGE ANALYSIS · HISTORICAL DATA</div>
+ <h3>Indicator study engine</h3>
+ <p class="page-lead">Upload a historical OHLC CSV file to calculate RSI, MACD, EMA and Bollinger Bands. This tool studies past candles only. It does not create live predictions or trade instructions.</p>
+ <div class="study-upload-row">
+  <label class="study-file-label" for="studyCsvFile">HISTORICAL OHLC CSV</label>
+  <input id="studyCsvFile" type="file" accept=".csv,text/csv">
+  <button class="primary-btn" id="runMarketStudy" type="button">Analyse historical data</button>
+ </div>
+ <p id="studyRunMessage" class="study-run-message" aria-live="polite">CSV format: timestamp, open, high, low, close. At least 60 rows are required.</p>
+ <div id="studyResults" class="study-results" hidden>
+  <div class="study-context-grid"><div><small>MARKET CONTEXT</small><b id="studyTrend"></b></div><div><small>MOMENTUM CONTEXT</small><b id="studyMomentum"></b></div><div><small>CANDLES STUDIED</small><b id="studyCount"></b></div></div>
+  <div class="study-metric-grid" id="studyMetrics"></div>
+  <h4>What the calculations show</h4><ul id="studyObservations"></ul>
+  <p class="study-limitations">Historical study only. Results depend on the CSV data supplied and are not forecasts.</p>
+ </div>
+</div>
 <div class="notice"><b>Important:</b> Trader is a learning platform. It does not provide personal financial advice, actionable buy/sell calls, automated orders or a guarantee of profitable outcomes. Crypto and forex markets can be highly volatile.</div>
 </section>
 <section class="page-view" id="page-bot">

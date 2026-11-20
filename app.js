@@ -16,10 +16,34 @@ const completed=new Set();
 function renderSlide(){const s=slides[currentSlide];$("slideKicker").textContent=s.kicker;$("slideTitle").textContent=s.title;$("slideText").textContent=s.text;document.querySelectorAll(".dot").forEach((d,i)=>d.classList.toggle("active",i===currentSlide));}
 function message(text,kind=""){const el=$("formMessage");el.textContent=text;el.className="form-message"+(kind?" "+kind:"");}
 function setMode(mode){authMode=mode;document.querySelectorAll(".auth-tab").forEach(t=>t.classList.toggle("active",t.dataset.mode===mode));$("fullNameGroup").classList.toggle("hidden",mode!=="signup");$("fullName").required=mode==="signup";$("legalConsentGroup").classList.toggle("hidden",mode!=="signup");$("legalConsent").required=mode==="signup";if(mode!=="signup")$("legalConsent").checked=false;$("forgotLink").classList.toggle("hidden",mode==="signup");$("authTitle").textContent=mode==="login"?"Good to have you back.":"Create your learning account.";$("authSubtitle").textContent=mode==="login"?"Log in to continue your learning journey.":"Join Trader and save your learning progress.";$("submitText").textContent=mode==="login"?"Log in to Trader":"Create my account";$("password").autocomplete=mode==="login"?"current-password":"new-password";message("");}
-function showAuth(){appShell.classList.add("hidden");authShell.classList.remove("hidden");}
+function showAuth(){document.getElementById("approvalGate")?.remove();appShell.classList.add("hidden");authShell.classList.remove("hidden");}
+function showApprovalGate(blocked){
+ authShell.classList.add("hidden");appShell.classList.add("hidden");
+ let gate=document.getElementById("approvalGate");
+ if(!gate){gate=document.createElement("main");gate.id="approvalGate";gate.className="approval-gate";document.body.appendChild(gate);}
+ gate.innerHTML='<section class="approval-card"><div class="brand-mark">T<span>·</span></div><div class="eyebrow">TRADER ACCOUNT ACCESS</div><h1></h1><p></p><div class="approval-status"></div><button id="approvalLogout" class="primary-btn">Sign out</button></section>';
+ gate.querySelector("h1").textContent=blocked?"Account access is paused":"Your account is awaiting approval";
+ gate.querySelector("p").textContent=blocked?"This account has been temporarily blocked by the administrator. Contact the site administrator if you believe this is a mistake.":"Your email sign-in worked. An administrator must approve your account before the learning workspace becomes available.";
+ gate.querySelector(".approval-status").textContent=blocked?"ACCESS BLOCKED":"PENDING ADMIN APPROVAL";
+ gate.querySelector("#approvalLogout").addEventListener("click",async()=>{await supabase.auth.signOut();currentUser=null;showAuth();});
+}
 function renderProgress(){$("lessonCount").innerHTML=completed.size+" <small>/ 8</small>";document.querySelectorAll("[data-lesson]").forEach(b=>{const done=completed.has(Number(b.dataset.lesson));b.classList.toggle("done",done);b.innerHTML=done?'Review lesson <span>✓</span>':'Open lesson <span>→</span>';});}
 async function loadLearnerData(user){const fullName=user.user_metadata?.full_name||user.email?.split("@")[0]||"Trader";const {data:profile,error:pe}=await supabase.from("profiles").upsert({id:user.id,full_name:fullName,email:user.email},{onConflict:"id"}).select("display_name,full_name,email").single();if(pe)console.warn(pe.message);const name=(profile?.display_name||profile?.full_name||user.user_metadata?.full_name||fullName||"Trader").trim();$("profileEmail").textContent=name;$("welcomeName").textContent=name.split(/\s+/)[0];document.querySelectorAll(".avatar").forEach(el=>{el.textContent=(name.match(/[\p{L}\p{N}]/u)||["T"])[0].toUpperCase();el.setAttribute("aria-label",name+" account");});const {data:portfolios,error:portfolioError}=await supabase.from("paper_portfolios").select("id,market_type").eq("user_id",user.id);if(portfolioError)console.warn(portfolioError.message);else if(!portfolios?.length){const {error:createError}=await supabase.from("paper_portfolios").insert([{user_id:user.id,market_type:"forex",starting_balance:10000,cash_balance:10000,currency:"USD",name:"Forex Paper Portfolio"},{user_id:user.id,market_type:"crypto",starting_balance:10000,cash_balance:10000,currency:"USD",name:"Crypto Paper Portfolio"}]);if(createError)console.warn(createError.message);}completed.clear();const {data:rows,error}=await supabase.from("lesson_progress").select("lesson_id").eq("user_id",user.id);if(error)console.error(error.message);else(rows||[]).forEach(r=>completed.add(Number(r.lesson_id)));renderProgress();}
-async function enterApp(user){if(currentUser?.id===user.id&&!appShell.classList.contains("hidden"))return;currentUser=user;authShell.classList.add("hidden");appShell.classList.remove("hidden");await loadLearnerData(user);}
+async function enterApp(user){
+ if(currentUser?.id===user.id&&!appShell.classList.contains("hidden"))return;
+ currentUser=user;
+ const isAdmin=user.id==="374c89e8-3593-4f57-b818-60ef29b8036f";
+ if(!isAdmin){
+  let {data:profile,error}=await supabase.from("profiles").select("id,admin_verified,is_blocked").eq("id",user.id).maybeSingle();
+  if(error){console.error("Could not check account approval:",error.message);await supabase.auth.signOut();currentUser=null;showAuth();message("We could not check your account approval. Please try again.","error");return;}
+  if(!profile){const {error:insertError}=await supabase.from("profiles").upsert({id:user.id,email:user.email,full_name:user.user_metadata?.full_name||user.email?.split("@")[0]||"Trader"},{onConflict:"id"});if(insertError){console.error(insertError.message);await supabase.auth.signOut();currentUser=null;showAuth();message("Your account profile is still being prepared. Please try again shortly.","error");return;}const check=await supabase.from("profiles").select("id,admin_verified,is_blocked").eq("id",user.id).maybeSingle();profile=check.data;}
+  if(profile?.is_blocked){showApprovalGate(true);return;}
+  if(!profile?.admin_verified){showApprovalGate(false);return;}
+ }
+ document.getElementById("approvalGate")?.remove();
+ authShell.classList.add("hidden");appShell.classList.remove("hidden");
+ await loadLearnerData(user);
+}
 function showPage(page){document.querySelectorAll(".page-view").forEach(p=>p.classList.toggle("active",p.id==="page-"+page));document.querySelectorAll(".nav-link[data-page]").forEach(n=>n.classList.toggle("active",n.dataset.page===page));$("pageName").textContent=({overview:"Overview",markets:"Market watch",practice:"Paper practice",signals:"Trading signals",bot:"Bot Lab",learn:"Learning hub"})[page]||"Overview";if(page==="signals")renderMarketChart();window.scrollTo({top:0,behavior:"smooth"});}
 const marketNames={"FX:EURUSD":"EUR / USD","FX:GBPUSD":"GBP / USD","FX:USDJPY":"USD / JPY","FX:AUDUSD":"AUD / USD","FX:USDCHF":"USD / CHF","FX:USDCAD":"USD / CAD","FX:NZDUSD":"NZD / USD","OANDA:XAUUSD":"Gold / USD","OANDA:XAGUSD":"Silver / USD","BINANCE:BTCUSDT":"Bitcoin / USDT","BINANCE:ETHUSDT":"Ethereum / USDT","BINANCE:SOLUSDT":"Solana / USDT","BINANCE:BNBUSDT":"BNB / USDT","BINANCE:XRPUSDT":"XRP / USDT","BINANCE:ADAUSDT":"Cardano / USDT","BINANCE:DOGEUSDT":"Dogecoin / USDT"};
 let chartLoadToken=0;

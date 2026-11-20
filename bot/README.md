@@ -40,7 +40,7 @@ pip install -e .
 uvicorn traderbot.api:app --reload
 ```
 
-Open `http://127.0.0.1:8000/docs` for the interactive API documentation. `GET /health` confirms the paper-only mode. `GET /markets` lists supported symbol examples.
+Open `http://127.0.0.1:8000/docs` for the interactive API documentation. `GET /health` confirms the paper-only mode. `GET /markets` lists supported symbol examples.\n\nTo use the website Bot Lab from a separate local frontend server, set the API CORS allow-list to the exact frontend origin before starting Uvicorn. For example, if the site is served at port 5500:\n\nPowerShell: `$env:TRADER_ALLOWED_ORIGINS="http://localhost:5500"`\nmacOS/Linux: `export TRADER_ALLOWED_ORIGINS="http://localhost:5500"`\n\nThen start the frontend separately with `python -m http.server 5500` from the repository root. In Bot Lab, keep the API URL as `http://127.0.0.1:8000`. For a hosted frontend, configure the API allow-list with its exact HTTPS origin. CORS is not authentication; keep this starter API private/local until proper user authentication, rate limits and request limits are added.
 
 ## Run a historical CSV backtest
 
@@ -62,7 +62,7 @@ python -m traderbot.cli --csv ./data/BTCUSDT_1h.csv --market crypto --symbol BTC
 
 The starter strategy studies a fast/slow EMA crossover with RSI confirmation. It is a deliberately simple baseline, not a claim of profitability. Signals are calculated only from completed candles and filled at the next candle open to reduce look-ahead bias. Stops and targets are ATR-scaled. If a candle touches both stop and target, the simulator assumes the adverse stop happened first. Fees and slippage are estimates and must be replaced with instrument- and broker-specific assumptions for meaningful research.
 
-Default guardrails: 0.5% risk budget per trade, 2% daily loss stop, 10% maximum drawdown stop and 1x notional cap. These are simulator constraints, not recommendations.
+Default guardrails: 0.5% risk budget per trade, 2% daily loss stop, 10% maximum drawdown stop and 1x notional cap. Drawdown and daily loss checks use marked-to-market simulated equity. These are simulator constraints, not recommendations. Position quantities are abstract units, not broker lots or contract sizes.
 
 ## MT4 / MT5 and crypto data
 

@@ -153,6 +153,7 @@ def run_backtest(candles: list[dict[str, Any]], strategy: StrategyConfig,
     gross_loss = abs(sum(min(0, t["net_pnl"]) for t in trades))
     return {
         "mode": "PAPER_SIMULATION_ONLY",
+        "live_execution": False,
         "market": market,
         "symbol": symbol,
         "timeframe": timeframe,

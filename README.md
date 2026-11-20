@@ -49,3 +49,11 @@ The saved references Freqtrade, Freqtrade Strategies and Superalgos informed the
 
 ## Paper trading bot foundation
 The `bot/` folder contains a separate Python engine for educational forex and cryptocurrency backtesting and paper replay. It includes CSV import for historical candles exported from MT4/MT5, EMA/RSI strategy studies, ATR risk controls, a FastAPI service, tests and a dashboard Bot Lab. It has no broker/exchange connection and no live order execution. See [bot/README.md](bot/README.md) for setup and run instructions.
+
+
+## Public introduction and legal pages
+- `index.html` is the public introduction page.
+- `app.html` contains the existing sign-in, sign-up and learning application.
+- `privacy.html` and `terms.html` provide starter legal notices.
+- Sign-up requires an unchecked consent box for the Terms and acknowledgment of the Privacy Policy. The accepted versions and timestamp are stored in Supabase Auth user metadata.
+- Before public launch, replace the operator-contact placeholder in the Privacy Policy, verify the real data flows and retention, and obtain a legal review. Update Supabase Auth redirect allow-lists to include `https://orezimeokelezo.github.io/Trader/app.html`.

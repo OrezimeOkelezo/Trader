@@ -101,6 +101,57 @@ function renderBotResult(result){
  $("botRiskSummary").innerHTML='<p>Risk budget: <b>'+result.risk_controls.risk_per_trade_pct+'%</b> per simulated position</p><p>Daily stop: <b>'+result.risk_controls.daily_loss_limit_pct+'%</b></p><p>Max drawdown stop: <b>'+result.risk_controls.max_drawdown_pct+'%</b></p><p>Leverage cap: <b>'+result.risk_controls.max_leverage+'x</b></p><p>Mode: <b>PAPER ONLY</b></p>';
  $("botTradeRows").innerHTML=result.trades.length?result.trades.slice().reverse().map(t=>'<tr><td>'+t.side+'</td><td>'+t.entry_price+'</td><td>'+t.exit_price+'</td><td>'+t.net_pnl+'</td><td>'+t.exit_reason+'</td></tr>').join(""):'<tr><td colspan="5">No simulated trades were generated for this sample.</td></tr>';
 }
+
+async function persistPaperReplayAndNotify(result){
+ if(!currentUser?.id)throw new Error("Please sign in again before saving paper results.");
+ const {data:portfolios,error:portfolioError}=await supabase.from("paper_portfolios").select("id,market_type").eq("user_id",currentUser.id);
+ if(portfolioError)throw new Error("Could not load your paper portfolios: "+portfolioError.message);
+ const portfolio=portfolios?.find(p=>p.market_type===result.market);
+ if(!portfolio)throw new Error("No "+result.market+" paper portfolio was found. Refresh your account and try again.");
+ const trades=Array.isArray(result.trades)?result.trades:[];
+ if(!trades.length){
+  const {error}=await supabase.functions.invoke("telegram-notify",{body:{message:"TRADER · PAPER REPLAY\n"+result.symbol+" · "+result.timeframe+"\nNo simulated entry events were generated for this historical sample.\nNo live orders were sent."}});
+  if(error)throw new Error("Replay completed, but Telegram notification failed: "+error.message);
+  return;
+ }
+ const rows=trades.map(t=>({
+  user_id:currentUser.id,
+  portfolio_id:portfolio.id,
+  market_type:result.market,
+  symbol:result.symbol,
+  timeframe:result.timeframe,
+  side:String(t.side||"").toLowerCase(),
+  quantity:t.quantity,
+  entry_price:t.entry_price,
+  exit_price:t.exit_price,
+  fees:t.fees||0,
+  pnl:t.net_pnl,
+  status:"closed",
+  strategy_label:result.strategy||"Educational paper replay",
+  notes:"Historical CSV paper replay only. Exit reason: "+String(t.exit_reason||"end_of_data"),
+  opened_at:t.entry_time,
+  closed_at:t.exit_time
+ }));
+ const {error:saveError}=await supabase.from("paper_trades").insert(rows);
+ if(saveError)throw new Error("Replay completed, but saving simulated trades failed: "+saveError.message);
+ const lines=trades.slice(0,10).map((t,i)=>
+  (i+1)+". "+String(t.side).toUpperCase()+" · "+result.symbol+
+  "\nEntry: "+t.entry_price+" ("+t.entry_time+")"+
+  "\nExit: "+t.exit_price+" ("+t.exit_time+")"+
+  "\nNet P&L: "+Number(t.net_pnl).toFixed(2)+" USD · "+String(t.exit_reason||"closed")
+ );
+ const omitted=trades.length>10?"\n…plus "+(trades.length-10)+" additional simulated trades saved in Trader.":"";
+ const message="TRADER · PAPER SIGNAL & TRADE REPORT\n"+
+  "Historical replay only · "+result.market.toUpperCase()+" · "+result.symbol+" · "+result.timeframe+
+  "\nStrategy study: "+(result.strategy||"EMA/RSI study")+
+  "\nSimulated positions: "+trades.length+
+  "\nNet result: "+Number(result.net_profit).toFixed(2)+" USD"+
+  "\nEnding virtual balance: "+Number(result.ending_balance).toFixed(2)+" USD"+
+  "\n\nENTRY / EXIT EVENTS\n"+lines.join("\n\n")+omitted+
+  "\n\nEducational historical simulation. Not a live signal or financial advice. No real orders were placed.";
+ const {error:notifyError}=await supabase.functions.invoke("telegram-notify",{body:{message}});
+ if(notifyError)throw new Error("Paper trades were saved, but Telegram delivery failed: "+notifyError.message);
+}
 $("runBotBacktest").addEventListener("click",async()=>{
  const file=botFileInput.files?.[0];
  if(!file)return showBotMessage("Choose a historical OHLCV CSV file first.",true);
@@ -118,7 +169,10 @@ $("runBotBacktest").addEventListener("click",async()=>{
   const response=await fetch(apiUrl+"/paper/replay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   const data=await response.json();
   if(!response.ok)throw new Error(data.detail||"Paper engine returned an error.");
-  renderBotResult(data);showBotMessage("Simulation completed. No live orders were sent.");
+  renderBotResult(data);
+  showBotMessage("Simulation completed. Saving paper-trade history and sending Telegram report…");
+  await persistPaperReplayAndNotify(data);
+  showBotMessage("Simulation saved to Supabase and Telegram report delivered. No live orders were sent.");
  }catch(error){showBotMessage(error.message||"Could not run the simulation. Check the API server and CSV file.",true);}
  finally{button.disabled=false;}
 });

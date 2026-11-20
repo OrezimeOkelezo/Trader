@@ -45,3 +45,7 @@ The saved references Freqtrade, Freqtrade Strategies and Superalgos informed the
 - Educational notes explain RSI, MACD, EMA/SMA and Bollinger Bands and how those concepts are also available in MetaTrader 4 and MetaTrader 5.
 - TradingView and broker feeds can differ; quote access and delays depend on instrument, exchange permissions, region and provider.
 - The page is an educational charting workspace, not a source of personal buy/sell instructions or automated trade signals.
+
+
+## Paper trading bot foundation
+The `bot/` folder contains a separate Python engine for educational forex and cryptocurrency backtesting and paper replay. It includes CSV import for historical candles exported from MT4/MT5, EMA/RSI strategy studies, ATR risk controls, a FastAPI service, tests and a dashboard Bot Lab. It has no broker/exchange connection and no live order execution. See [bot/README.md](bot/README.md) for setup and run instructions.
